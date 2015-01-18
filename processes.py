@@ -350,7 +350,7 @@ def assignScoreMain(opinionData, **kwargs):
 	else:
 		print("Assigning Score-Input:\tReading Files")
 		polarityTag =fread(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name'])[1].split("\n"))
-		resultArray =np.genfromtxt(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name'], delimiter=","))
+		resultArray =np.genfromtxt(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), delimiter=",")
 
 	return (resultArray, polarityTag)
 
@@ -390,5 +390,7 @@ if __name__ =="__main__":
 	rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
 	rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
 	print(start%"Classifying")
+	print(len(tags))
+	print(rsSentic.shape)
 	rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
 	print(rs)
