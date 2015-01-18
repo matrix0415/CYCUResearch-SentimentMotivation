@@ -318,8 +318,8 @@ def assignScoreMain(opinionData, **kwargs):
 	from sklearn.feature_extraction.text import CountVectorizer as vectorizer
 	from libs.nlpLib import sentimentScoreLib as sentiscore
 
-	if isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])) and \
-		isfile(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name'])):
+	if not isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])) and \
+		not isfile(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name'])):
 		scoreList =[]
 		resultArray =np.array([])
 		polarityTag =[polarity for polarity, i in opinionData]
@@ -330,7 +330,7 @@ def assignScoreMain(opinionData, **kwargs):
 		rsarray =vec.fit_transform(opinions)
 		feature =vec.get_feature_names()
 		bywords =rsarray.toarray().T
-		print("Assigning Score-Process:\tassigning, ",kwargs['name'])
+		print("Assigning Score-Process:\tassigning, %s"%kwargs['name'])
 
 		if 'lexicon' in kwargs:
 			senticnetObj =sentiscore(type=kwargs['scoreType'], rdfPath=kwargs['rdfPath'], tags=kwargs['tags'], nltkPath=nltkPath)
