@@ -395,8 +395,5 @@ if __name__ =="__main__":
 	feature, rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
 	feature, rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
 	print(start%"Classifying")
-	print(len(tags))
-	print(tags)
-	print(rsSentic.shape)
 	#rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
 	#print(rs)
