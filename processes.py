@@ -15,7 +15,7 @@ from libs.fileLib import fileRead as fread, fileWrite as fwrite, fileReadLine as
 
 jobCapacity =3
 nltkPath ="venv/nltk_data"
-senticnetPath ="libs/nltk_data/senticnet3.rdf.xml"
+senticnetPath ="venv/nltk_data/senticnet3.rdf.xml"
 nltk =nltk(nltkPath)
 tagList =[
 	"VB", "VBD", "VBN", "VBP", "VBZ",
@@ -304,8 +304,8 @@ def assignScoreFunction(token, **kwargs):
 	rs =0.0
 
 	if 'sentimentScoreLibObj' and 'scoreType' in kwargs:
-		print(123333)
-		rs =kwargs['sentimentScoreLibObj'].fetchScore(token =token, scoreType=kwargs['scoreType'])
+		rsbool, rs =kwargs['sentimentScoreLibObj'].fetchScore(token =token, scoreType=kwargs['scoreType'])
+		if not rsbool: print(rs)
 
 	elif 'feature' and 'score' in kwargs:
 		if token in kwargs['feature']:
