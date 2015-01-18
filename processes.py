@@ -315,32 +315,39 @@ def assignScoreMain(opinionData, **kwargs):
 	from sklearn.feature_extraction.text import CountVectorizer as vectorizer
 	from libs.nlpLib import sentimentScoreLib as sentiscore
 
-	scoreList =[]
-	resultArray =np.array([])
-	polarityTag =[polarity for polarity, i in opinionData]
-	opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
-	opinions =[content for rsbool, content in opinions if rsbool]
+	if isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])) and \
+		isfile(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name'])):
+		scoreList =[]
+		resultArray =np.array([])
+		polarityTag =[polarity for polarity, i in opinionData]
+		opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
+		opinions =[content for rsbool, content in opinions if rsbool]
 
-	vec =vectorizer(ngram_range =(1,3))
-	rsarray =vec.fit_transform(opinions)
-	feature =vec.get_feature_names()
-	bywords =rsarray.toarray().T
-	print("Assigning Score-Process:\tassigning, ",kwargs['name'])
+		vec =vectorizer(ngram_range =(1,3))
+		rsarray =vec.fit_transform(opinions)
+		feature =vec.get_feature_names()
+		bywords =rsarray.toarray().T
+		print("Assigning Score-Process:\tassigning, ",kwargs['name'])
 
-	if 'lexicon' in kwargs:
-		senticnetObj =sentiscore(type=kwargs['scoreType'], rdfPath=kwargs['rdfPath'], tags=kwargs['tags'], nltkPath=nltkPath)
-		scoreList =[assignScoreFunction(token=w, sentimentScoreLibObj=senticnetObj, scoreType="polarity") for w in feature]
+		if 'lexicon' in kwargs:
+			senticnetObj =sentiscore(type=kwargs['scoreType'], rdfPath=kwargs['rdfPath'], tags=kwargs['tags'], nltkPath=nltkPath)
+			scoreList =[assignScoreFunction(token=w, sentimentScoreLibObj=senticnetObj, scoreType="polarity") for w in feature]
 
-	elif 'feature' and 'score' in kwargs:
-		scoreList =[assignScoreFunction(token=w, feature=kwargs['feature'], score=kwargs['score']) for w in feature]
+		elif 'feature' and 'score' in kwargs:
+			scoreList =[assignScoreFunction(token=w, feature=kwargs['feature'], score=kwargs['score']) for w in feature]
 
-	for index, s in enumerate(scoreList): bywords[index:index+1] *=s
-	resultArray =bywords.T
+		for index, s in enumerate(scoreList): bywords[index:index+1] *=s
+		resultArray =bywords.T
 
-	print("Assigning Score-Output:\tfinal")
-	fwrite(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']), "\n".join(polarityTag))
-	fwrite(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), "\n".join(feature))
-	np.savetxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), resultArray, delimiter=",", fmt='%1.10f')
+		print("Assigning Score-Output:\tfinal")
+		fwrite(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']), "\n".join(polarityTag))
+		fwrite(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), "\n".join(feature))
+		np.savetxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), resultArray, delimiter=",", fmt='%1.10f')
+
+	else:
+		print("Assigning Score-Input:\tReading Files")
+		polarityTag =fread(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name'])[1].split("\n"))
+		resultArray =np.genfromtxt(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name'], delimiter=","))
 
 	return (resultArray, polarityTag)
 
