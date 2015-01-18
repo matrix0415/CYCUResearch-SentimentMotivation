@@ -304,7 +304,7 @@ def assignScoreFunction(token, **kwargs):
 	rs =0.0
 
 	if 'sentimentScoreLibObj' and 'scoreType' in kwargs:
-		rsbool, rs =kwargs['sentimentScoreLibObj'].fetchScore(token =token, scoreType=kwargs['scoreType'])
+		rsbool, rs =kwargs['sentimentScoreLibObj'].fetchScore(token =token, tag =kwargs['scoreType'])
 		if not rsbool: print(rs)
 
 	elif 'feature' and 'score' in kwargs:
