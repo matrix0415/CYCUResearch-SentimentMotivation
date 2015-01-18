@@ -334,11 +334,9 @@ def assignScoreMain(opinionData, **kwargs):
 	if 'lexicon' in kwargs:
 		senticnetObj =sentiscore(type=kwargs['lexicon'], rdfPath=kwargs['rdfPath'], tags=kwargs['tags'], nltkPath=nltkPath)
 		scoreList =[assignScoreFunction(token=w, sentimentScoreLibObj=senticnetObj, scoreType="polarity") for w in feature]
-		print(scoreList)
 
 	elif 'feature' and 'score' in kwargs:
 		scoreList =[assignScoreFunction(token=w, feature=kwargs['feature'], score=kwargs['score']) for w in feature]
-		#print(scoreList)
 
 	else:
 		print("Assigning Score-Process:\tError, none of the options.")
