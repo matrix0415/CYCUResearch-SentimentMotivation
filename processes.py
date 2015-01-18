@@ -321,35 +321,42 @@ def assignScoreMain(opinionData, **kwargs):
 	from libs.nlpLib import sentimentScoreLib as sentiscore
 
 	scoreList =[]
-	polarityTag =[polarity for polarity, i in opinionData]
-	opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
-	opinions =[content for rsbool, content in opinions if rsbool]
 
-	vec =vectorizer(ngram_range =(1,3))
-	rsarray =vec.fit_transform(opinions)
-	feature =vec.get_feature_names()
-	bywords =rsarray.toarray().T
-	print("Assigning Score-Process:\tassigning, %s"%kwargs['name'])
+	if not isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])):
+		polarityTag =[polarity for polarity, i in opinionData]
+		opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
+		opinions =[content for rsbool, content in opinions if rsbool]
 
-	if 'lexicon' in kwargs:
-		senticnetObj =sentiscore(type=kwargs['lexicon'], rdfPath=kwargs['rdfPath'], tags=kwargs['tags'], nltkPath=nltkPath)
-		scoreList =[assignScoreFunction(token=w, sentimentScoreLibObj=senticnetObj, scoreType="polarity") for w in feature]
+		vec =vectorizer(ngram_range =(1,3))
+		rsarray =vec.fit_transform(opinions)
+		feature =vec.get_feature_names()
+		bywords =rsarray.toarray().T
+		print("Assigning Score-Process:\tassigning, %s"%kwargs['name'])
 
-	elif 'feature' and 'score' in kwargs:
-		scoreList =[assignScoreFunction(token=w, feature=kwargs['feature'], score=kwargs['score']) for w in feature]
+		if 'lexicon' in kwargs:
+			senticnetObj =sentiscore(type=kwargs['lexicon'], rdfPath=kwargs['rdfPath'], tags=kwargs['tags'], nltkPath=nltkPath)
+			scoreList =[assignScoreFunction(token=w, sentimentScoreLibObj=senticnetObj, scoreType="polarity") for w in feature]
+
+		elif 'feature' and 'score' in kwargs:
+			scoreList =[assignScoreFunction(token=w, feature=kwargs['feature'], score=kwargs['score']) for w in feature]
+
+		else:
+			print("Assigning Score-Process:\tError, none of the options.")
+
+		for index, s in enumerate(scoreList): bywords[index:index+1] *=s
+		resultArray =bywords.T
+
+		print("Assigning Score-Output:\tfinal")
+		fwrite(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']), "\n".join(feature))
+		fwrite(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), "\n".join(polarityTag))
+		np.savetxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), resultArray, delimiter=",", fmt='%1.7f')
 
 	else:
-		print("Assigning Score-Process:\tError, none of the options.")
+		feature =fread(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']))[1].split("\n")
+		polarityTag =fread(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']))[1].split("\n")
+		resultArray =np.genfromtxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), delimiter=",")
 
-	for index, s in enumerate(scoreList): bywords[index:index+1] *=s
-	resultArray =bywords.T
-
-	print("Assigning Score-Output:\tfinal")
-	fwrite(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']), "\n".join(polarityTag))
-	fwrite(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), "\n".join(feature))
-	np.savetxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), resultArray, delimiter=",", fmt='%1.7f')
-
-	return (resultArray, polarityTag)
+	return (feature, resultArray, polarityTag)
 
 
 def classifyMain(data):
@@ -384,9 +391,9 @@ if __name__ =="__main__":
 	content =opinionPickMain(count =opinionPickPerFile)
 	print(len(content))
 	print(start%"Assigning Score")
-	rsSentic, tags =assignScoreMain(content, lexicon ='senticnet', name ="senticnet", rdfPath =senticnetPath, tags=['polarity'])
-	rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
-	rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
+	feature, rsSentic, tags =assignScoreMain(content, lexicon ='senticnet', name ="senticnet", rdfPath =senticnetPath, tags=['polarity'])
+	feature, rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
+	feature, rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
 	print(start%"Classifying")
 	print(len(tags))
 	print(tags)
