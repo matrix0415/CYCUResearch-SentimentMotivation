@@ -55,6 +55,9 @@ assignScoreScores ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-assign-scores.csv"
 assignScorePolarity ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-assign-polarity.csv"
 assignScoreFeatures ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-assign-features.csv"
 
+# Classify Setting
+cvFold =10
+
 
 def preprocessFunction(fname):
 	rs =[]
@@ -352,8 +355,21 @@ def assignScoreMain(opinionData, **kwargs):
 	return (resultArray, polarityTag)
 
 
-def classifyMain():
-	pass
+def classifyMain(data):
+	from sklearn import svm, cross_validation as cv
+
+	rs =[]
+	model = svm.SVC()
+
+	for scores, tags in data:
+		accuracy =cv.cross_val_score(model, scores, tags, scoring='accuracy', n_jobs =-1, cv =cvFold)
+		avgPrecision =cv.cross_val_score(model, scores, tags, scoring='average_precision', n_jobs =-1, cv =cvFold)
+		f1 =cv.cross_val_score(model, scores, tags, scoring='f1', n_jobs =-1, cv =cvFold)
+		precision =cv.cross_val_score(model, scores, tags, scoring='precision', n_jobs =-1, cv =cvFold)
+		recall =cv.cross_val_score(model, scores, tags, scoring='recall', n_jobs =-1, cv =cvFold)
+		rs.append({"accuracy": accuracy, "avgPrecision": avgPrecision, "f1": f1, "precision": precision, "recall": recall})
+
+	return rs
 
 
 if __name__ =="__main__":
@@ -374,4 +390,5 @@ if __name__ =="__main__":
 	rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
 	rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
 	print(start%"Classifying")
-	classifyMain()
+	rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
+	print(rs)
