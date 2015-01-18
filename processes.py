@@ -15,6 +15,7 @@ from libs.fileLib import fileRead as fread, fileWrite as fwrite, fileReadLine as
 
 jobCapacity =3
 nltkPath ="venv/nltk_data"
+senticnetPath ="libs/nltk_data/senticnet3.rdf.xml"
 nltk =nltk(nltkPath)
 tagList =[
 	"VB", "VBD", "VBN", "VBP", "VBZ",
@@ -47,16 +48,16 @@ calSaveOriIdf ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-original-idf.csv"
 calSaveRsCombine ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-combine.csv"
 
 # Opinion Pick Setting
-opinionPickPerFile =10
+opinionPickPerFile =15
 
 # Assign Score Setting
 assignScoreLocation ="dataset/scores"
-assignScoreScores ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-assign-scores.csv"
-assignScorePolarity ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-assign-polarity.csv"
-assignScoreFeatures ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-assign-features.csv"
+assignScoreScores ="%s-%ddf-%dperFile"%(opinionPerFile, maxDF, opinionPickPerFile)+"-%s-assign-scores.csv"
+assignScorePolarity ="%s-%ddf-%dperFile"%(opinionPerFile, maxDF, opinionPickPerFile)+"-%s-assign-polarity.csv"
+assignScoreFeatures ="%s-%ddf-%dperFile"%(opinionPerFile, maxDF, opinionPickPerFile)+"-%s-assign-features.csv"
 
 # Classify Setting
-cvFold =10
+cvFold =3
 
 
 def preprocessFunction(fname):
@@ -303,6 +304,7 @@ def assignScoreFunction(token, **kwargs):
 	rs =0.0
 
 	if 'sentimentScoreLibObj' and 'scoreType' in kwargs:
+		print(123333)
 		rs =kwargs['sentimentScoreLibObj'].fetchScore(token =token, scoreType=kwargs['scoreType'])
 
 	elif 'feature' and 'score' in kwargs:
@@ -318,39 +320,36 @@ def assignScoreMain(opinionData, **kwargs):
 	from sklearn.feature_extraction.text import CountVectorizer as vectorizer
 	from libs.nlpLib import sentimentScoreLib as sentiscore
 
-	if not isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])) and \
-		not isfile(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name'])):
-		scoreList =[]
-		resultArray =np.array([])
-		polarityTag =[polarity for polarity, i in opinionData]
-		opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
-		opinions =[content for rsbool, content in opinions if rsbool]
+	scoreList =[]
+	polarityTag =[polarity for polarity, i in opinionData]
+	opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
+	opinions =[content for rsbool, content in opinions if rsbool]
 
-		vec =vectorizer(ngram_range =(1,3))
-		rsarray =vec.fit_transform(opinions)
-		feature =vec.get_feature_names()
-		bywords =rsarray.toarray().T
-		print("Assigning Score-Process:\tassigning, %s"%kwargs['name'])
+	vec =vectorizer(ngram_range =(1,3))
+	rsarray =vec.fit_transform(opinions)
+	feature =vec.get_feature_names()
+	bywords =rsarray.toarray().T
+	print("Assigning Score-Process:\tassigning, %s"%kwargs['name'])
 
-		if 'lexicon' in kwargs:
-			senticnetObj =sentiscore(type=kwargs['scoreType'], rdfPath=kwargs['rdfPath'], tags=kwargs['tags'], nltkPath=nltkPath)
-			scoreList =[assignScoreFunction(token=w, sentimentScoreLibObj=senticnetObj, scoreType="polarity") for w in feature]
+	if 'lexicon' in kwargs:
+		senticnetObj =sentiscore(type=kwargs['lexicon'], rdfPath=kwargs['rdfPath'], tags=kwargs['tags'], nltkPath=nltkPath)
+		scoreList =[assignScoreFunction(token=w, sentimentScoreLibObj=senticnetObj, scoreType="polarity") for w in feature]
+		print(scoreList)
 
-		elif 'feature' and 'score' in kwargs:
-			scoreList =[assignScoreFunction(token=w, feature=kwargs['feature'], score=kwargs['score']) for w in feature]
-
-		for index, s in enumerate(scoreList): bywords[index:index+1] *=s
-		resultArray =bywords.T
-
-		print("Assigning Score-Output:\tfinal")
-		fwrite(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']), "\n".join(polarityTag))
-		fwrite(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), "\n".join(feature))
-		np.savetxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), resultArray, delimiter=",", fmt='%1.10f')
+	elif 'feature' and 'score' in kwargs:
+		scoreList =[assignScoreFunction(token=w, feature=kwargs['feature'], score=kwargs['score']) for w in feature]
+		#print(scoreList)
 
 	else:
-		print("Assigning Score-Input:\tReading Files")
-		polarityTag =fread(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name'])[1].split("\n"))
-		resultArray =np.genfromtxt(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), delimiter=",")
+		print("Assigning Score-Process:\tError, none of the options.")
+
+	for index, s in enumerate(scoreList): bywords[index:index+1] *=s
+	resultArray =bywords.T
+
+	print("Assigning Score-Output:\tfinal")
+	fwrite(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']), "\n".join(polarityTag))
+	fwrite(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), "\n".join(feature))
+	np.savetxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), resultArray, delimiter=",", fmt='%1.7f')
 
 	return (resultArray, polarityTag)
 
@@ -385,12 +384,14 @@ if __name__ =="__main__":
 	avgRs, maxRs =scoreCombineMain(rsarray)
 	print(start%"Opinion Pick")
 	content =opinionPickMain(count =opinionPickPerFile)
+	print(len(content))
 	print(start%"Assigning Score")
-	rsSentic, tags =assignScoreMain(content, scoreType ='senticnet', name ="senticnet")
+	rsSentic, tags =assignScoreMain(content, lexicon ='senticnet', name ="senticnet", rdfPath =senticnetPath, tags=['polarity'])
 	rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
 	rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
 	print(start%"Classifying")
 	print(len(tags))
+	print(tags)
 	print(rsSentic.shape)
-	rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
-	print(rs)
+	#rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
+	#print(rs)
