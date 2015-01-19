@@ -284,17 +284,17 @@ def opinionPickMain(**kwargs):
 		totalOpinion =kwargs['count']
 		print("Opinion Pick-Picking:\ttotal %d, %d/per file"%(totalOpinion, totalOpinion/len(flist)))
 		tmp =[fline(path =f, count =totalOpinion/len(flist))[1] for p, f in flist if p ==5.0]
-		pos =[("pos", i) for i in list(itertools.chain(*tmp))]
+		pos =[(0, i) for i in list(itertools.chain(*tmp))]
 		tmp =[fline(path =f, count =totalOpinion/len(flist))[1] for p, f in flist if p ==1.0]
-		neg =[("neg", i) for i in list(itertools.chain(*tmp))]
+		neg =[(1, i) for i in list(itertools.chain(*tmp))]
 
 	elif 'line' in kwargs:
 		line =kwargs['line']
 		print("Opinion Pick-Picking:\ttotal %d, %d/per file"%((line[1]-line[0])*len(flist), line[1]-line[0]))
 		tmp =[fline(path =f, line =(line[0], line[1]))[1] for p, f in flist if p ==5.0]
-		pos =[("pos", i[1]) for i in list(itertools.chain(*tmp)) if i[0]]
+		pos =[(0, i[1]) for i in list(itertools.chain(*tmp)) if i[0]]
 		tmp =[fline(path =f, line =(line[0], line[1]))[1] for p, f in flist if p ==1.0]
-		neg =[("neg", i[1]) for i in list(itertools.chain(*tmp)) if i[0]]
+		neg =[(1, i[1]) for i in list(itertools.chain(*tmp)) if i[0]]
 
 	return pos+neg
 
@@ -322,8 +322,8 @@ def assignScoreMain(opinionData, **kwargs):
 
 	scoreList =[]
 
-	if not isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])):
-		polarityTag =[polarity for polarity, i in opinionData]
+	if isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])):
+		polarityTag =np.array([polarity for polarity, i in opinionData])
 		opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
 		opinions =[content for rsbool, content in opinions if rsbool]
 
@@ -348,12 +348,12 @@ def assignScoreMain(opinionData, **kwargs):
 
 		print("Assigning Score-Output:\tfinal")
 		fwrite(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']), "\n".join(feature))
-		fwrite(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), "\n".join(polarityTag))
+		np.savetxt(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), polarityTag, delimiter=",", fmt='%1.1i')
 		np.savetxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), resultArray, delimiter=",", fmt='%1.7f')
 
 	else:
 		feature =fread(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']))[1].split("\n")
-		polarityTag =fread(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']))[1].split("\n")
+		polarityTag =np.genfromtxt(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), delimiter=",")
 		resultArray =np.genfromtxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), delimiter=",")
 
 	return (feature, resultArray, polarityTag)
@@ -395,5 +395,6 @@ if __name__ =="__main__":
 	feature, rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
 	feature, rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
 	print(start%"Classifying")
+	print(tags)
 	rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
 	print(rs)
