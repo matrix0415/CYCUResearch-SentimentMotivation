@@ -48,7 +48,7 @@ calSaveOriIdf ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-original-idf.csv"
 calSaveRsCombine ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-combine.csv"
 
 # Opinion Pick Setting
-opinionPickPerFile =1000
+opinionPickPerFile =10000
 
 # Assign Score Setting
 assignScoreLocation ="dataset/scores"
@@ -383,19 +383,24 @@ if __name__ =="__main__":
 
 	print(start%"Preprocess")
 	data =preprocessMain()
+
 	print(start%"Calculate")
 	rsCalculate =calculateMain(data)
+
 	print(start%"Transform")
 	feature, rsarray =transformMain(rsCalculate)
+
 	print(start%"Combining Scores")
 	avgRs, maxRs =scoreCombineMain(rsarray)
+
 	print(start%"Opinion Pick")
 	content =opinionPickMain(count =opinionPickPerFile)
-	print(len(content))
+
 	print(start%"Assigning Score")
 	feature, rsSentic, tags =assignScoreMain(content, lexicon ='senticnet', name ="senticnet", rdfPath =senticnetPath, tags=['polarity'])
 	feature, rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
 	feature, rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
+
 	print(start%"Classifying")
 	print(tags)
 	rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
