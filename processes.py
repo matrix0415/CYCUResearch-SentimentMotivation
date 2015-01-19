@@ -12,12 +12,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer as tfidf
 from libs.nlpLib import nltkL as nltk
 from libs.fileLib import fileRead as fread, fileWrite as fwrite, fileReadLine as fline
 
-
-jobCapacity =3
-nltkPath ="venv/nltk_data"
-senticnetPath ="venv/nltk_data/senticnet3.rdf.xml"
-nltk =nltk(nltkPath)
-tagList =[
+# GLOBAL SETTING
+jobCapacity =cpu()*3                                # depend on your computer capacity.
+nltkPath ="venv/nltk_data"                          # nltk_data location, if you want to use the default path, empty  it.
+senticnetPath ="venv/nltk_data/senticnet3.rdf.xml"  # senticnet rdf file path.
+nltk =nltk(nltkPath)                                # Object: libs.nltkL created.
+tagList =[                                          # Part of speech tags you accept.
 	"VB", "VBD", "VBN", "VBP", "VBZ",
 	"NN", "NNS", "NNP", "NNPS",
 	"JJ", "JJR", "JJS",
@@ -26,17 +26,16 @@ tagList =[
 ]
 
 # Preprocess Config setting
-stopwordList =[]
-outputPreprocess =True
-preprocessDatasetLocation ="dataset/classified"
-preprocessTargetLocation ="dataset/filter"
+stopwordList =[]                                    # Stopwords List-->['we', 'is'...]
+preprocessDatasetLocation ="dataset/classified"     # Original File location.
+preprocessTargetLocation ="dataset/filter"          # Opinions after pre-process.
 
 # Calculate setting setting
-opinionPerFile =1500
-ngram =(1, 3)
-maxDF =2
-normalization ='l2'
-calTargetLocation ="dataset/calculate"
+opinionPerFile =1500                                # How many opinions you want to use to calculate the scores.
+ngram =(1, 3)                                       # N-Gram
+maxDF =2                                            # Maximum df number, delete if over.
+normalization ='l2'                                 # TF-IDF normalization.
+calTargetLocation ="dataset/calculate"              # Output Folder.
 calSaveFList ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-fList.csv"
 calSaveOriFList ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-original-fList.csv"
 calSaveFeature ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-feature.csv"
@@ -48,7 +47,7 @@ calSaveOriIdf ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-original-idf.csv"
 calSaveRsCombine ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-combine.csv"
 
 # Opinion Pick Setting
-opinionPickPerFile =10000
+opinionPickPerFile =10000                           #
 
 # Assign Score Setting
 assignScoreLocation ="dataset/scores"
@@ -83,17 +82,16 @@ def preprocessMain():
 	targetList =sorted(listdir(preprocessTargetLocation))
 	fList =[i for i in fList if i not in targetList]
 	print("Preprocess-Process:\tpreprocessing")
-	pool =Pool(processes =cpu()*jobCapacity)
+	pool =Pool(processes =jobCapacity)
 	rs =pool.map(preprocessFunction, fList)
 	pool.close()
 	pool.join()
 
-	if outputPreprocess:
-		for fname, content in rs:
-			print("Preprocess-Output:\t%s"%fname)
-			outputBool, outputRs =fwrite(pathjoin(preprocessTargetLocation, fname), "\n".join(content))
-			if outputBool: print("Preprocess-Output: Success.")
-			else: print("Preprocess-Output: Failed.")
+	for fname, content in rs:
+		print("Preprocess-Output:\t%s"%fname)
+		outputBool, outputRs =fwrite(pathjoin(preprocessTargetLocation, fname), "\n".join(content))
+		if outputBool: print("Preprocess-Output: Success.")
+		else: print("Preprocess-Output: Failed.")
 
 	return rs
 
@@ -366,11 +364,11 @@ def classifyMain(data):
 	model = svm.SVC()
 
 	for scores, tags in data:
-		accuracy =cv.cross_val_score(model, scores, tags, scoring='accuracy', n_jobs =-1, cv =cvFold)
-		avgPrecision =cv.cross_val_score(model, scores, tags, scoring='average_precision', n_jobs =-1, cv =cvFold)
-		f1 =cv.cross_val_score(model, scores, tags, scoring='f1', n_jobs =-1, cv =cvFold)
-		precision =cv.cross_val_score(model, scores, tags, scoring='precision', n_jobs =-1, cv =cvFold)
-		recall =cv.cross_val_score(model, scores, tags, scoring='recall', n_jobs =-1, cv =cvFold)
+		accuracy =cv.cross_val_score(model, scores, tags, scoring='accuracy', n_jobs =jobCapacity, cv =cvFold)
+		avgPrecision =cv.cross_val_score(model, scores, tags, scoring='average_precision', n_jobs =jobCapacity, cv =cvFold)
+		f1 =cv.cross_val_score(model, scores, tags, scoring='f1', n_jobs =jobCapacity, cv =cvFold)
+		precision =cv.cross_val_score(model, scores, tags, scoring='precision', n_jobs =jobCapacity, cv =cvFold)
+		recall =cv.cross_val_score(model, scores, tags, scoring='recall', n_jobs =jobCapacity, cv =cvFold)
 		rs.append({"accuracy": accuracy, "avgPrecision": avgPrecision, "f1": f1, "precision": precision, "recall": recall})
 
 	fwrite(resultFile, str(rs))
@@ -402,6 +400,5 @@ if __name__ =="__main__":
 	feature, rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
 
 	print(start%"Classifying")
-	print(tags)
 	rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
 	print(rs)
