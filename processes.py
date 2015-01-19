@@ -48,7 +48,7 @@ calSaveOriIdf ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-original-idf.csv"
 calSaveRsCombine ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-combine.csv"
 
 # Opinion Pick Setting
-opinionPickPerFile =15
+opinionPickPerFile =1000
 
 # Assign Score Setting
 assignScoreLocation ="dataset/scores"
@@ -57,7 +57,7 @@ assignScorePolarity ="%s-%ddf-%dperFile"%(opinionPerFile, maxDF, opinionPickPerF
 assignScoreFeatures ="%s-%ddf-%dperFile"%(opinionPerFile, maxDF, opinionPickPerFile)+"-%s-assign-features.csv"
 
 # Classify Setting
-cvFold =3
+cvFold =10
 resultFile ="dataset/result/%s-%ddf-%dperFile-%fold"%(opinionPerFile, maxDF, opinionPickPerFile, cvFold)
 
 def preprocessFunction(fname):
@@ -322,7 +322,7 @@ def assignScoreMain(opinionData, **kwargs):
 
 	scoreList =[]
 
-	if isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])):
+	if not isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])):
 		polarityTag =np.array([polarity for polarity, i in opinionData])
 		opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
 		opinions =[content for rsbool, content in opinions if rsbool]
@@ -372,6 +372,8 @@ def classifyMain(data):
 		precision =cv.cross_val_score(model, scores, tags, scoring='precision', n_jobs =-1, cv =cvFold)
 		recall =cv.cross_val_score(model, scores, tags, scoring='recall', n_jobs =-1, cv =cvFold)
 		rs.append({"accuracy": accuracy, "avgPrecision": avgPrecision, "f1": f1, "precision": precision, "recall": recall})
+
+	fwrite(resultFile, str(rs))
 
 	return rs
 
