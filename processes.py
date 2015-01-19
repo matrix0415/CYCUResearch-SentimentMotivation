@@ -58,7 +58,7 @@ assignScoreFeatures ="%s-%ddf-%dperFile"%(opinionPerFile, maxDF, opinionPickPerF
 
 # Classify Setting
 cvFold =3
-
+resultFile ="dataset/result/%s-%ddf-%dperFile-%fold"%(opinionPerFile, maxDF, opinionPickPerFile, cvFold)
 
 def preprocessFunction(fname):
 	rs =[]
