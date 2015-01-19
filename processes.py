@@ -57,6 +57,7 @@ assignScoreFeatures ="%s-%ddf-%dperFile"%(opinionPerFile, maxDF, opinionPickPerF
 
 # Classify Setting
 cvFold =10
+classifyJobs =5
 resultFile ="dataset/result/%s-%ddf-%dperFile-%fold"%(opinionPerFile, maxDF, opinionPickPerFile, cvFold)
 
 def preprocessFunction(fname):
@@ -320,39 +321,33 @@ def assignScoreMain(opinionData, **kwargs):
 
 	scoreList =[]
 
-	if not isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])):
-		polarityTag =np.array([polarity for polarity, i in opinionData])
-		opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
-		opinions =[content for rsbool, content in opinions if rsbool]
+	polarityTag =np.array([polarity for polarity, i in opinionData])
+	opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
+	opinions =[content for rsbool, content in opinions if rsbool]
 
-		vec =vectorizer(ngram_range =(1,3), dtype =np.float)
-		rsarray =vec.fit_transform(opinions)
-		feature =vec.get_feature_names()
-		bywords =rsarray.toarray().T
-		print("Assigning Score-Process:\tassigning, %s"%kwargs['name'])
+	vec =vectorizer(ngram_range =(1,3), dtype ='float16')
+	rsarray =vec.fit_transform(opinions)
+	feature =vec.get_feature_names()
+	bywords =rsarray.toarray().T
+	print("Assigning Score-Process:\tassigning, %s"%kwargs['name'])
 
-		if 'lexicon' in kwargs:
-			senticnetObj =sentiscore(type=kwargs['lexicon'], rdfPath=kwargs['rdfPath'], tags=kwargs['tags'], nltkPath=nltkPath)
-			scoreList =[assignScoreFunction(token=w, sentimentScoreLibObj=senticnetObj, scoreType="polarity") for w in feature]
+	if 'lexicon' in kwargs:
+		senticnetObj =sentiscore(type=kwargs['lexicon'], rdfPath=kwargs['rdfPath'], tags=kwargs['tags'], nltkPath=nltkPath)
+		scoreList =[assignScoreFunction(token=w, sentimentScoreLibObj=senticnetObj, scoreType="polarity") for w in feature]
 
-		elif 'feature' and 'score' in kwargs:
-			scoreList =[assignScoreFunction(token=w, feature=kwargs['feature'], score=kwargs['score']) for w in feature]
-
-		else:
-			print("Assigning Score-Process:\tError, none of the options.")
-
-		for index, s in enumerate(scoreList): bywords[index:index+1] *=s
-		resultArray =bywords.T
-
-		print("Assigning Score-Output:\tfinal")
-		fwrite(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']), "\n".join(feature))
-		np.savetxt(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), polarityTag, delimiter=",", fmt='%1.1i')
-		np.savetxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), resultArray, delimiter=",", fmt='%1.7f')
+	elif 'feature' and 'score' in kwargs:
+		scoreList =[assignScoreFunction(token=w, feature=kwargs['feature'], score=kwargs['score']) for w in feature]
 
 	else:
-		feature =fread(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']))[1].split("\n")
-		polarityTag =np.genfromtxt(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), delimiter=",")
-		resultArray =np.genfromtxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), delimiter=",")
+		print("Assigning Score-Process:\tError, none of the options.")
+
+	for index, s in enumerate(scoreList): bywords[index:index+1] *=s
+	resultArray =bywords.T
+
+	print("Assigning Score-Output:\tfinal")
+	fwrite(pathjoin(assignScoreLocation, assignScoreFeatures%kwargs['name']), "\n".join(feature))
+	np.savetxt(pathjoin(assignScoreLocation, assignScorePolarity%kwargs['name']), polarityTag, delimiter=",", fmt='%1.1i')
+	np.savetxt(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name']), resultArray, delimiter=",", fmt='%1.7f')
 
 	return (feature, resultArray, polarityTag)
 
@@ -364,11 +359,11 @@ def classifyMain(data):
 	model = svm.SVC()
 
 	for scores, tags in data:
-		accuracy =cv.cross_val_score(model, scores, tags, scoring='accuracy', n_jobs =jobCapacity, cv =cvFold)
-		avgPrecision =cv.cross_val_score(model, scores, tags, scoring='average_precision', n_jobs =jobCapacity, cv =cvFold)
-		f1 =cv.cross_val_score(model, scores, tags, scoring='f1', n_jobs =jobCapacity, cv =cvFold)
-		precision =cv.cross_val_score(model, scores, tags, scoring='precision', n_jobs =jobCapacity, cv =cvFold)
-		recall =cv.cross_val_score(model, scores, tags, scoring='recall', n_jobs =jobCapacity, cv =cvFold)
+		accuracy =cv.cross_val_score(model, scores, tags, scoring='accuracy', n_jobs =classifyJobs, cv =cvFold)
+		avgPrecision =cv.cross_val_score(model, scores, tags, scoring='average_precision', n_jobs =classifyJobs, cv =cvFold)
+		f1 =cv.cross_val_score(model, scores, tags, scoring='f1', n_jobs =classifyJobs, cv =cvFold)
+		precision =cv.cross_val_score(model, scores, tags, scoring='precision', n_jobs =classifyJobs, cv =cvFold)
+		recall =cv.cross_val_score(model, scores, tags, scoring='recall', n_jobs =classifyJobs, cv =cvFold)
 		rs.append({"accuracy": accuracy, "avgPrecision": avgPrecision, "f1": f1, "precision": precision, "recall": recall})
 
 	fwrite(resultFile, str(rs))
@@ -396,9 +391,18 @@ if __name__ =="__main__":
 
 	print(start%"Assigning Score")
 	feature, rsSentic, tags =assignScoreMain(content, lexicon ='senticnet', name ="senticnet", rdfPath =senticnetPath, tags=['polarity'])
-	feature, rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
-	feature, rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
-
 	print(start%"Classifying")
-	rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
+	rs =classifyMain([rsSentic, tags])
+	print(rs)
+
+	print(start%"Assigning Score")
+	feature, rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
+	print(start%"Classifying")
+	rs =classifyMain([rsAvgRs, tags])
+	print(rs)
+
+	print(start%"Assigning Score")
+	feature, rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
+	print(start%"Classifying")
+	rs =classifyMain([rsMaxRs, tags])
 	print(rs)
