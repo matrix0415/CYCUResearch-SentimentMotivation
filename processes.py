@@ -327,7 +327,7 @@ def assignScoreMain(opinionData, **kwargs):
 		opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
 		opinions =[content for rsbool, content in opinions if rsbool]
 
-		vec =vectorizer(ngram_range =(1,3))
+		vec =vectorizer(ngram_range =(1,3), dtype =np.float)
 		rsarray =vec.fit_transform(opinions)
 		feature =vec.get_feature_names()
 		bywords =rsarray.toarray().T
@@ -395,5 +395,5 @@ if __name__ =="__main__":
 	feature, rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
 	feature, rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
 	print(start%"Classifying")
-	#rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
-	#print(rs)
+	rs =classifyMain(([rsSentic, tags], [rsAvgRs, tags], [rsMaxRs, tags]))
+	print(rs)
