@@ -10,7 +10,10 @@ from multiprocessing import freeze_support
 from multiprocessing import cpu_count as cpu
 from sklearn.feature_extraction.text import TfidfVectorizer as tfidf
 from libs.nlpLib import nltkL as nltk
-from libs.fileLib import fileRead as fread, fileWrite as fwrite, fileReadLine as fline
+from libs.fileLib import fileRead as fread
+from libs.fileLib import fileWrite as fwrite
+from libs.fileLib import fileReadLine as fline
+from libs.fileLib import fileWriteLine as fwline
 
 # GLOBAL SETTING
 jobCapacity =cpu()*3                                # depend on your computer capacity.
@@ -58,7 +61,7 @@ assignScoreFeatures ="%s-%ddf-%dperFile"%(opinionPerFile, maxDF, opinionPickPerF
 # Classify Setting
 cvFold =10
 classifyJobs =2
-resultFile ="dataset/result/%s-%ddf-%dperFile-%dfold"%(opinionPerFile, maxDF, opinionPickPerFile, cvFold)
+resultFile ="dataset/result/%s-%ddf-%dperFile-%dfold"%(opinionPerFile, maxDF, opinionPickPerFile, cvFold)+"-%s"
 
 
 def preprocessFunction(fname):
@@ -323,7 +326,7 @@ def assignScoreMain(opinionData, **kwargs):
 	scoreList =[]
 
 	if True:#not isfile(pathjoin(assignScoreLocation, assignScoreScores%kwargs['name'])):
-		polarityTag =np.array([polarity for polarity, i in opinionData])
+		polarityTag =np.array([polarity for polarity, i in opinionData], dtype ='bool_')
 		opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
 		opinions =[content for rsbool, content in opinions if rsbool]
 		vec =vectorizer(ngram_range =(1,3), dtype ='float16')
@@ -359,7 +362,7 @@ def assignScoreMain(opinionData, **kwargs):
 	return (feature, resultArray, polarityTag)
 
 
-def classifyMain(data):
+def classifyMain(name ="", rsarray =np.array([]), polarityTag =np.array([])):
 	from sklearn import svm, cross_validation as cv
 
 	rs =[]
@@ -372,7 +375,7 @@ def classifyMain(data):
 	recall =cv.cross_val_score(model, scores, tags, scoring='recall', n_jobs =classifyJobs, cv =cvFold)
 	rs.append({"accuracy": accuracy, "avgPrecision": avgPrecision, "f1": f1, "precision": precision, "recall": recall})
 
-	fwrite(resultFile, rs)
+	fwline(resultFile, rs)
 
 	return rs
 
@@ -398,17 +401,17 @@ if __name__ =="__main__":
 	print(start%"Assigning Score")
 	feature, rsSentic, tags =assignScoreMain(content, lexicon ='senticnet', name ="senticnet", rdfPath =senticnetPath, tags=['polarity'])
 	print(start%"Classifying")
-	rs =classifyMain([rsSentic, tags])
+	rs =classifyMain(name='senticnet', rsarray=rsSentic, polarityTag=tags)
 	print(rs)
 
 	print(start%"Assigning Score")
 	feature, rsAvgRs, tags =assignScoreMain(content, feature =feature, score =avgRs, name ="average")
 	print(start%"Classifying")
-	rs =classifyMain([rsAvgRs, tags])
+	rs =classifyMain(name ="average", rsarray=rsAvgRs, polarityTag=tags)
 	print(rs)
 
 	print(start%"Assigning Score")
 	feature, rsMaxRs, tags =assignScoreMain(content, feature =feature, score =maxRs, name ="max")
 	print(start%"Classifying")
-	rs =classifyMain([rsMaxRs, tags])
+	rs =classifyMain(name ="max", rsarray=rsMaxRs, polarityTag=tags)
 	print(rs)
