@@ -34,9 +34,9 @@ preprocessDatasetLocation ="dataset/classified"     # Original File location.
 preprocessTargetLocation ="dataset/filter"          # Opinions after pre-process.
 
 # Calculate setting setting
-opinionPerFile =1000                                # How many opinions you want to use to calculate the scores.
+opinionPerFile =1500                                # How many opinions you want to use to calculate the scores.
 ngram =(1, 3)                                       # N-Gram
-maxDF =0                                            # Maximum df number, delete if over.
+maxDF =2                                            # Maximum df number, delete if over.
 normalization ='l2'                                 # TF-IDF normalization.
 calTargetLocation ="dataset/calculate"              # Output Folder.
 calSaveFList ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-fList.csv"
@@ -364,6 +364,8 @@ def assignScoreMain(opinionData, **kwargs):
 
 def classifyMain(name ="", rsarray =np.array([]), polarityTag =np.array([])):
 	from sklearn import svm, cross_validation as cv
+
+	rs ={}
 
 	if not isfile(resultFile%name):
 		model = svm.SVC(verbose =True, probability =True)
