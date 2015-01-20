@@ -47,7 +47,7 @@ calSaveOriIdf ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-original-idf.csv"
 calSaveRsCombine ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-combine.csv"
 
 # Opinion Pick Setting
-opinionPickPerFile =3000                           #
+opinionPickPerFile =1000                           #
 
 # Assign Score Setting
 assignScoreLocation ="dataset/scores"
@@ -58,7 +58,7 @@ assignScoreFeatures ="%s-%ddf-%dperFile"%(opinionPerFile, maxDF, opinionPickPerF
 # Classify Setting
 cvFold =10
 classifyJobs =2
-resultFile ="dataset/result/%s-%ddf-%dperFile-%fold"%(opinionPerFile, maxDF, opinionPickPerFile, cvFold)
+resultFile ="dataset/result/%s-%ddf-%dperFile-%dfold"%(opinionPerFile, maxDF, opinionPickPerFile, cvFold)
 
 def preprocessFunction(fname):
 	rs =[]
@@ -325,7 +325,6 @@ def assignScoreMain(opinionData, **kwargs):
 		polarityTag =np.array([polarity for polarity, i in opinionData])
 		opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
 		opinions =[content for rsbool, content in opinions if rsbool]
-
 		vec =vectorizer(ngram_range =(1,3), dtype ='float16')
 		rsarray =vec.fit_transform(opinions)
 		feature =vec.get_feature_names()
