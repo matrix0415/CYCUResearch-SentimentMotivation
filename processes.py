@@ -10,7 +10,7 @@ from multiprocessing import freeze_support
 from multiprocessing import cpu_count as cpu
 from sklearn.feature_extraction.text import TfidfVectorizer as tfidf
 from libs.nlpLib import nltkL as nltk
-from libs.fileLib import fileRead as fread
+from libs.fileLib import fileRead as fread, fileWriteDict, fileReadDict
 from libs.fileLib import fileWrite as fwrite
 from libs.fileLib import fileReadLine as fline
 from libs.fileLib import fileWriteLine as fwline
@@ -34,9 +34,9 @@ preprocessDatasetLocation ="dataset/classified"     # Original File location.
 preprocessTargetLocation ="dataset/filter"          # Opinions after pre-process.
 
 # Calculate setting setting
-opinionPerFile =1500                                # How many opinions you want to use to calculate the scores.
+opinionPerFile =1000                                # How many opinions you want to use to calculate the scores.
 ngram =(1, 3)                                       # N-Gram
-maxDF =2                                            # Maximum df number, delete if over.
+maxDF =0                                            # Maximum df number, delete if over.
 normalization ='l2'                                 # TF-IDF normalization.
 calTargetLocation ="dataset/calculate"              # Output Folder.
 calSaveFList ="%s"%opinionPerFile+"-%ddf"%maxDF+"-%s-fList.csv"
@@ -60,7 +60,7 @@ assignScoreFeatures ="%s-%ddf-%dperFile"%(opinionPerFile, maxDF, opinionPickPerF
 
 # Classify Setting
 cvFold =10
-classifyJobs =2
+classifyJobs =5
 resultFile ="dataset/result/%s-%ddf-%dperFile-%dfold"%(opinionPerFile, maxDF, opinionPickPerFile, cvFold)+"-%s"
 
 
@@ -329,7 +329,7 @@ def assignScoreMain(opinionData, **kwargs):
 		polarityTag =np.array([polarity for polarity, i in opinionData], dtype ='bool_')
 		opinions =[nltk.posTaggerFilter(str(i), acceptTagList =tagList) for polarity, i in opinionData]
 		opinions =[content for rsbool, content in opinions if rsbool]
-		vec =vectorizer(ngram_range =(1,3), dtype ='float16')
+		vec =vectorizer(ngram_range =(1,3), dtype =float)
 		rsarray =vec.fit_transform(opinions)
 		feature =vec.get_feature_names()
 		bywords =rsarray.toarray().T
@@ -365,17 +365,18 @@ def assignScoreMain(opinionData, **kwargs):
 def classifyMain(name ="", rsarray =np.array([]), polarityTag =np.array([])):
 	from sklearn import svm, cross_validation as cv
 
-	rs =[]
-	model = svm.SVC(verbose =True)
-	scores, tags =data
-	accuracy =cv.cross_val_score(model, scores, tags, scoring='accuracy', n_jobs =classifyJobs, cv =cvFold)
-	avgPrecision =cv.cross_val_score(model, scores, tags, scoring='average_precision', n_jobs =classifyJobs, cv =cvFold)
-	f1 =cv.cross_val_score(model, scores, tags, scoring='f1', n_jobs =classifyJobs, cv =cvFold)
-	precision =cv.cross_val_score(model, scores, tags, scoring='precision', n_jobs =classifyJobs, cv =cvFold)
-	recall =cv.cross_val_score(model, scores, tags, scoring='recall', n_jobs =classifyJobs, cv =cvFold)
-	rs.append({"accuracy": accuracy, "avgPrecision": avgPrecision, "f1": f1, "precision": precision, "recall": recall})
+	if not isfile(resultFile%name):
+		model = svm.SVC(verbose =True, probability =True)
+		accuracy =cv.cross_val_score(model, rsarray, polarityTag, scoring='accuracy', n_jobs =classifyJobs, cv =cvFold)
+		avgPrecision =cv.cross_val_score(model, rsarray, polarityTag, scoring='average_precision', n_jobs =classifyJobs, cv =cvFold)
+		precision =cv.cross_val_score(model, rsarray, polarityTag, scoring='precision', n_jobs =classifyJobs, cv =cvFold)
+		recall =cv.cross_val_score(model, rsarray, polarityTag, scoring='recall', n_jobs =classifyJobs, cv =cvFold)
+		f1 =cv.cross_val_score(model, rsarray, polarityTag, scoring='f1', n_jobs =classifyJobs, cv =cvFold)
+		rs ={"accuracy": accuracy, "avgPrecision": avgPrecision, "f1": f1, "precision": precision, "recall": recall}
+		fileWriteDict(resultFile%name, rs)
 
-	fwline(resultFile, rs)
+	else:
+		rs =fileReadDict(resultFile%name)
 
 	return rs
 

@@ -43,6 +43,12 @@ def fileReadLine(path, lineSplit ="\n", **kwargs):
 	return rs
 
 
+def fileReadDict(path):
+	import csv
+
+	return dict(content for content in csv.reader(open(path, 'rb')))
+
+
 def fileWrite(path, content):
 	import os
 
@@ -65,3 +71,22 @@ def fileWrite(path, content):
 def fileWriteLine(path, contentList, listJoin ="\n"):
 	content =listJoin.join([str(i) for i in contentList])
 	return fileWrite(path= path, content= contentList)
+
+
+def fileWriteDict(path, contentDic):
+	import os, csv
+
+	rs =[False,]
+
+	try:
+		if not os.path.exists(os.path.dirname(path)):
+			os.makedirs(os.path.dirname(path))
+
+		writer =csv.writer(open(path, 'wb'))
+		[writer.writerow([key, value]) for key, value in contentDic.items()]
+		rs[0] =True
+
+	except Exception as e:
+		rs.append(writeLogL('libs.fileLib.fileWriteDict', e))
+
+	return rs
