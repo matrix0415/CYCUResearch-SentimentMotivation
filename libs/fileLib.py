@@ -60,3 +60,8 @@ def fileWrite(path, content):
 		rs[1] =writeLogL("libs.fileL.fileWrite", e)
 		
 	return rs
+
+
+def fileWriteLine(path, contentList, listJoin ="\n"):
+	content =listJoin.join([str(i) for i in contentList])
+	return fileWrite(path= path, content= contentList)
