@@ -60,6 +60,7 @@ cvFold =10
 classifyJobs =2
 resultFile ="dataset/result/%s-%ddf-%dperFile-%dfold"%(opinionPerFile, maxDF, opinionPickPerFile, cvFold)
 
+
 def preprocessFunction(fname):
 	rs =[]
 	content =fread(pathjoin(preprocessDatasetLocation, fname))[1].split("\n")
